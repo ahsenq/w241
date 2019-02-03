@@ -3,7 +3,6 @@ title: "Problem Set 2"
 author: "Experiments and Causality"
 output:
   pdf_document: default
-  html_document: default
 ---
 
 
@@ -34,16 +33,18 @@ Using the data here, test the sharp null hypothesis that winning the visa lotter
 
 ```{r}
 d <- read.csv("./data/Clingingsmith.2009.csv", stringsAsFactors = FALSE)
-dt <- fread("./data/Clingingsmith.2009.csv")
+dt1 <- fread("./data/Clingingsmith.2009.csv")
 ```
 a. Using either `dplyr` or `data.table`, group the data by `success` and report whether views toward others are generally more positive among lottery winners or lottery non-winners. 
 
 ```{r}
-ATE <- dt[ , .('group_mean' = mean(views)), keyby = .(success)] %>%
+ATE <- dt1[ , .('group_mean' = mean(views)), keyby = .(success)] %>%
     .[ , diff(group_mean)]
 ATE
 ```
-**We see an ATE of about 0.475, meaning those who win the visa lottery see an average delta in views of about 0.475 versus those that do not win the visa lottery.**
+**We see an ATE of about 0.475, meaning those who win the visa lottery see an average positive delta in views of about 0.475 versus those that do not win the visa lottery.**
+
+\newpage
 
 b. But is this a meaningful difference, or could it just be randomization noise? Conduct 10,000 simulated random assignments under the sharp null hypothesis to find out. (Don't just copy the code from the async, think about how to write this yourself.) 
 
@@ -54,7 +55,7 @@ n_sims = 10000
 res <- rep(NA , n_sims)
 # loop and replicate the experiment
 for(i in 1:n_sims) {
-    res[i] <- dt %>%
+    res[i] <- dt1 %>%
         .[ , .('group_mean' = mean(views)), keyby = sample(success)] %>%
         .[ , diff(group_mean)]
 }
@@ -65,35 +66,40 @@ for(i in 1:n_sims) {
 hist(res, breaks = 20, )
 abline(v=ATE, col = "red")
 ```
+
 **We see that when we replicate the experiment 10,000 times we see a relatively normal distribution centered around 0. The ATE of 0.475 that we were seeing is on an extreme tail end of the distribution. Hence, the ATE we computed may not be significant in the grand scheme of things.**
+
+\newpage
 
 c. How many of the simulated random assignments generate an estimated ATE that is at least as large as the actual estimate of the ATE? 
 
 ```{r}
 sum(res >= ATE)
 ```
-**Of the simulated random assignments, 14 generate an estimated ATE which is at least as large as the ATE we estimated.**
+**Of the simulated random assignments,** `r sum(res >= ATE)` **generate an estimated ATE which is at least as large as the ATE we estimated.**
 
 d. What is the implied *one-tailed* p-value? 
 
 ```{r}
 mean(res>=ATE)
 ```
-**The implied one-tailed p-value is 0.0014.**
+**The implied one-tailed p-value is:** `r mean(res>=ATE)`
 
 e. How many of the simulated random assignments generate an estimated ATE that is at least as large *in absolute value* as the actual estimate of the ATE? 
 
 ```{r}
 sum(abs(res) >= ATE)
 ```
-**Of the simulated random assignments, 35 generate an estimated ATE whose absolute value is at least as large as the ATE we estimated.**
+**Of the simulated random assignments,** `r sum(abs(res) >= ATE)` **generate an estimated ATE whose absolute value is at least as large as the ATE we estimated.**
 
 f. What is the implied two-tailed p-value? 
 
 ```{r}
 mean(abs(res) >= ATE)
 ```
-**The implied two-tailed p-value is 0.0035.**
+**The implied two-tailed p-value is: ** `r mean(abs(res) >= ATE)`
+
+\newpage
 
 # 2. Term Limits Aren't Good. 
 
@@ -116,6 +122,7 @@ dt2 <- data.table::data.table(d2)
 ```
 
 ```{r}
+# report mean number of bills in each state
 d2 %>%
   group_by(texas0_arkansas1) %>%
   summarize(mean_bills = mean(bills_introduced))
@@ -123,20 +130,22 @@ d2 %>%
 **We see that Texas introduced significantly more bills than Arkansas. However, is this a good measure of productivity? The bills introduced by Texas could be very minor. We cannot say for sure if Texas was more productive unless we know the impact the bills had. Going solely by average number of bills, Texas was far more productive.**
 
 ```{r}
+# report mean number of bills by term
 d2 %>%
   group_by(term2year) %>%
   summarize(mean_bills = mean(bills_introduced))
 ```
-**We see that the difference in bills introduced by each state is lower when grouped by term. However, if you normalized the data using time, 2 year terms produce more bills as per the data**
-
-**This does seem to suggest that more bills get passed during two year terms.**
+**We see that the difference in bills introduced by each state is lower when grouped by term. However, if you normalized the data using time, 2 year terms produce more bills as per the data. This does seem to suggest that more bills get passed during two year terms if you normalize by time. Term length is more likely to be causal rather than the state.**
 
 ```{r}
+# report mean number of bills by term and year
 d2 %>%
   group_by(texas0_arkansas1, term2year) %>%
   summarize(mean_bills = mean(bills_introduced))
 ```
 **The overall number of bills introduced in four year terms is higher. This makes sense given that there is more time to pass more bills. However, the delta between bills passed in two year terms versus four year terms is small. If we consider productivity a function of time, two year terms are more productive than four year terms.**
+
+\newpage
 
 b. For each state, estimate the standard error of the estimated ATE. 
 
@@ -156,6 +165,8 @@ m_ak = dt2[texas0_arkansas1 == 1 & term2year == 1, .N]
 se_ak = sqrt((var0_ak/(N_ak - m_ak) + var1_ak/m_ak))
 cat("The standard error of the estimated ATE for Arkansas is: ", se_ak)
 ```
+
+\newpage
 
 c. Use equation (3.10) to estimate the overall ATE for both states combined. 
 
@@ -177,12 +188,16 @@ cat("The overall ATE for both states combines is: ", ate_overall)
 
 d. Explain why, in this study, simply pooling the data for the two states and comparing the average number of bills introduced by two-year senators to the average number of bills introduced by four-year senators leads to biased estimate of the overall ATE. 
 
+**Since the data is not normalized by time more often than not four year terms will have more bills simply because there is more time to pass them. Hence pooling data this way will bias results in favor of four year terms.**
+
 e. Insert the estimated standard errors into equation (3.12) to estimate the stand error for the overall ATE. 
 
 ```{r}
 se_overall = sqrt(se_tx^2 * (N_tx/N_tot)^2 + se_ak^2 * (N_ak/N_tot)^2)
 cat("The estimated standard error for overall ATE is: ", se_overall)
 ```
+
+\newpage
 
 f. Use randomization inference to test the sharp null hypothesis that the treatment effect is zero for senators in both states. 
 
@@ -207,7 +222,13 @@ for(i in 1:n_sims) {
 cat("The average treatment effect for Texas is: ", mean(tex_res), "\n")
 cat("The average treatment effect for Arkansas is: ", mean(ak_res))
 ```
-**As you can see the treatment effect under the sharp null is very close for both states.**
+```{r}
+cat("The two-tailed p-value using randomization inference for Texas is: ", mean(abs(tex_res) >= abs(ate_tx)), "\n")
+cat("The two-tailed p-value using randomization inference for Arkansas is: ", mean(abs(ak_res) >= abs(ate_ak)))
+```
+**As you can see the treatment effect under the sharp null is very close to zero for both states.**
+
+\newpage
 
 g. **IN Addition:** Plot histograms for both the treatment and control groups in each state (for 4 histograms in total).
 ```{r}
@@ -216,6 +237,7 @@ hist(dt2[texas0_arkansas1 == 0 & term2year == 1, bills_introduced], breaks = 5, 
 hist(dt2[texas0_arkansas1 == 1 & term2year == 0, bills_introduced], breaks = 5, main = "Arkansas Control", xlab = "Bills Introduced")
 hist(dt2[texas0_arkansas1 == 1 & term2year == 1, bills_introduced], breaks = 5, main = "Arkansas Treatment", xlab = "Bills Introduced")
 ```
+\newpage
 
 # 3. Cluster Randomization
 Use the data in *Field Experiments* Table 3.3 to simulate cluster randomized assignment. (*Notes: (a) Assume 3 clusters in treatment and 4 in control; and (b) When Gerber and Green say ``simulate'', they do not mean ``run simulations with R code'', but rather, in a casual sense ``take a look at what happens if you do this this way.'' There is no randomization inference necessary to complete this problem.*)
@@ -224,21 +246,80 @@ Use the data in *Field Experiments* Table 3.3 to simulate cluster randomized ass
 ```{r}
 ## load data 
 d <- read.csv("./data/ggChapter3.csv", stringsAsFactors = FALSE)
+dt3 <- fread("./data/ggChapter3.csv")
 ```
 
 a. Suppose the clusters are formed by grouping observations {1,2}, {3,4}, {5,6}, ... , {13,14}. Use equation (3.22) to calculate the standard error assuming half of the clusters are randomly assigned to treatment. 
 
 ```{r} 
+# add cluster assignments to the data table
+dt3[, clusters := rep(1:7, each=2)]
+```
 
+```{r}
+# define and compute the information we need
+sample <- sample(unique(dt3[["clusters"]]),length(unique(dt3[["clusters"]]))/2)
+treatment <- is.element(dt3[["clusters"]], sample)
+k = length(unique(dt3[["clusters"]]))
+N = dt3[ , .N]
+m = sum(treatment)
+# append treatment to the data table
+cbind(dt3, treatment)
+```
+
+```{r}
+# compute treatment means and control means
+treat_out = dt3[treatment,c("Y","clusters")]
+treat_out_mean = tapply(treat_out$Y, as.numeric(treat_out$cluster), mean)
+control_out = treat_out
+control_out_mean = tapply(control_out$Y, as.numeric(control_out$cluster), mean)
+```
+
+```{r}
+# compute the standard error
+se = sqrt((1/(k-1))*((m*var(control_out_mean))/(N-m) + (N-m)*var(treat_out_mean)/m + 2*cov(control_out_mean, treat_out_mean)))
+cat("The standard error is: ", se)
 ```
 
 b. Suppose that clusters are instead formed by grouping observations {1,14}, {2,13}, {3,12}, ... , {7,8}. Use equation (3.22) to calculate the standard error assuming half of the clusters are randomly assigned to treatment. 
 
 ```{r} 
+# re-init the data table
+dt3 <- fread("./data/ggChapter3.csv")
+# add cluster assignments to the data table
+dt3[, clusters := c(1,2,3,4,5,6,7,7,6,5,4,3,2,1)]
+```
 
-``` 
+```{r}
+# define and compute the information we need
+sample <- sample(unique(dt3[["clusters"]]),length(unique(dt3[["clusters"]]))/2)
+treatment <- is.element(dt3[["clusters"]], sample)
+k = length(unique(dt3[["clusters"]]))
+N = dt3[ , .N]
+m = sum(treatment)
+# append treatment to the data table
+cbind(dt3, treatment)
+```
+
+```{r}
+# compute treatment means and control means
+treat_out = dt3[treatment,c("Y","clusters")]
+treat_out_mean = tapply(treat_out$Y, as.numeric(treat_out$cluster), mean)
+control_out = treat_out
+control_out_mean = tapply(control_out$Y, as.numeric(control_out$cluster), mean)
+```
+
+```{r}
+# compute the standard error
+se = sqrt((1/(k-1))*((m*var(control_out_mean))/(N-m) + (N-m)*var(treat_out_mean)/m + 2*cov(control_out_mean, treat_out_mean)))
+cat("The standard error is: ", se)
+```
 
 c. Why do the two methods of forming clusters lead to different standard errors? What are the implications for the design of cluster randomized experiments? 
+
+**The second method of clustering has a lower standard error because it better randomizes the Y variable when pairing villages. This implies that a cluster design should be selected such that it randomizes the data properly and has an overall low standard error.**
+
+\newpage
 
 # 4. Sell Phones? 
 You are an employee of a newspaper and are planning an experiment to demonstrate to Apple that online advertising on your website causes people to buy iPhones. Each site visitor shown the ad campaign is exposed to $0.10 worth of advertising for iPhones. (Assume all users could see ads.) There are 1,000,000 users available to be shown ads on your newspaper’s website during the one week campaign. 
@@ -248,24 +329,63 @@ Apple indicates that they make a profit of $100 every time an iPhone sells and t
 a. By how much does the ad campaign need to increase the probability of purchase in order to be “worth it” and a positive ROI (supposing there are no long-run effects and all the effects are measured within that week)?
 
 ```{r}
-
+# store the data we are given
+cost_per_ad = 0.1
+users = 1000000
+profit_per_phone = 100
+users_buy_rate_no_ads = 0.5
+phones_sold_no_ads = (users_buy_rate_no_ads/100)*users
 ```
+
+```{r}
+# assuming all users are shown ads
+ad_cost = cost_per_ad * users
+# number of phones needed to be sold to cover ad cost
+num_phones_cover_ad_cost = ad_cost/profit_per_phone
+# convert to percentage of users
+percent_users = num_phones_cover_ad_cost/users
+cat("The increase in user buy rate needs to be greater than: ", percent_users*100)
+```
+**More than 0.6% of all visitors to our newspaper's website need to purchase a phone in order to produce a positive ROI.**
+
+\newpage
 
 b. Assume the measured effect is 0.2 percentage points. If users are split 50:50 between the treatment group (exposed to iPhone ads) and control group (exposed to unrelated advertising or nothing; something you can assume has no effect), what will be the confidence interval of your estimate on whether people purchase the phone?
 
 ```{r}
-
+meas_eff = 0.2/100
+users_control = users/2
+users_treat = users/2
+p = (users_buy_rate_no_ads*users_control/100 + (users_buy_rate_no_ads/100+meas_eff)*users_treat)/users
+se = sqrt(p*(1-p)*(1/users_treat + 1/users_control))
+cat("The standard error for part b is: ", se, "\n")
+ci = 1.96*se
+upper_ci = meas_eff + ci
+lower_ci = meas_eff - ci
+cat("The 95% CI is between: ", lower_ci*100, " and ", upper_ci*100, " percentage points.")
 ```
 
   + **Note:** The standard error for a two-sample proportion test is $\sqrt{p(1-p)*(\frac{1}{n_{1}}+\frac{1}{n_{2}})}$ where $p=\frac{x_{1}+x_{2}}{n_{1}+n_{2}}$, where $x$ and $n$ refer to the number of “successes” (here, purchases) over the number of “trials” (here, site visits). The length of each tail of a 95% confidence interval is calculated by multiplying the standard error by 1.96.
   
 c. Is this confidence interval precise enough that you would recommend running this experiment? Why or why not?
 
+**The confidence interval we calculated is well beyond the minimum we calculated in part (a). Thus, we would recomment running the experiment.**
+
 d. Your boss at the newspaper, worried about potential loss of revenue, says he is not willing to hold back a control group any larger than 1% of users. What would be the width of the confidence interval for this experiment if only 1% of users were placed in the control group?
 
 ```{r}
-
+users_control = users*0.01
+users_treat = users*0.99
+p = (users_buy_rate_no_ads*users_control/100 + (users_buy_rate_no_ads/100+meas_eff)*users_treat)/users
+se = sqrt(p*(1-p)*(1/users_treat + 1/users_control))
+cat("The standard error for part b is: ", se, "\n")
+ci = 1.96*se
+upper_ci = meas_eff + ci
+lower_ci = meas_eff - ci
+cat("The 95% CI is between: ", lower_ci*100, " and ", upper_ci*100, " percentage points.")
 ```
+
+\newpage
 
 # 5. Sports Cards
 Here you will find a set of data from an auction experiment by John List and David Lucking-Reiley ([2000](https://drive.google.com/file/d/0BxwM1dZBYvxBNThsWmFsY1AyNEE/view?usp=sharing)).  
@@ -278,41 +398,86 @@ head(d2)
 In this experiment, the experimenters invited consumers at a sports card trading show to bid against one other bidder for a pair trading cards.  We abstract from the multi-unit-auction details here, and simply state that the treatment auction format was theoretically predicted to produce lower bids than the control auction format.  We provide you a relevant subset of data from the experiment.
 
 a. Compute a 95% confidence interval for the difference between the treatment mean and the control mean, using analytic formulas for a two-sample t-test from your earlier statistics course. 
+```{r}
+dt5 = fread("./data/listData.csv")
+```
 
 ```{r}
-
+control = dt5[uniform_price_auction == 0, bid]
+treat = dt5[uniform_price_auction == 1, bid]
+t.test(treat, control)
 ```
 
 b. In plain language, what does this confidence interval mean?
 
+**The confidence interval of [-20.854, -3.557] implies that if this experiment was repeated several times, there is a 95% chance that the ATE would fall in this range.**
+
+\newpage
+
 c. Regression on a binary treatment variable turns out to give one the same answer as the standard analytic formula you just used.  Demonstrate this by regressing the bid on a binary variable equal to 0 for the control auction and 1 for the treatment auction.
 
 ```{r}
-
+model = lm(bid ~ uniform_price_auction, data = dt5)
+summary(model)
 ```
+
+\newpage
 
 d. Calculate the 95% confidence interval you get from the regression.
 
 ```{r}
-
+confint(model, 'uniform_price_auction', level = 0.95)
 ```
 
 e. On to p-values. What p-value does the regression report? Note: please use two-tailed tests for the entire problem.
 
 ```{r}
-
+cat("The p-value is: ", summary(model)$coefficients[8] )
 ```
+
+\newpage
 
 f. Now compute the same p-value using randomization inference.
+```{r}
+# compute the ate
+ATE5 <- dt5[ , .('group_mean' = mean(bid)), keyby = .(uniform_price_auction)] %>%
+    .[ , diff(group_mean)]
+ATE5
+```
 
 ```{r}
-
+# specify number of simulations
+n_sims = 10000
+# init to NA values
+res <- rep(NA , n_sims)
+# loop and replicate the experiment
+for(i in 1:n_sims) {
+    res[i] <- dt5 %>%
+        .[ , .('group_mean' = mean(bid)), keyby = sample(uniform_price_auction)] %>%
+        .[ , diff(group_mean)]
+}
 ```
+
+```{r}
+mean(abs(res) >= abs(ATE5))
+```
+
+```{r}
+hist(res, breaks = 20)
+abline(v=ATE5, col = "red")
+```
+
+\newpage
 
 g. Compute the same p-value again using analytic formulas for a two-sample t-test from your earlier statistics course. (Also see part (a).)
 
 ```{r}
-
+tstat = abs(t.test(treat, control)$statistic)
+df = t.test(treat, control)$parameter
+analytic_pval = 2*pt(tstat, df, lower=FALSE)
+cat("The analytic p-value is: ", analytic_pval)
 ```
 
 h. Compare the two p-values in parts (e) and (f). Are they much different? Why or why not? How might your answer to this question change if the sample size were different?
+
+**There is a small delta between the values. This is most likely due to the sample size. Increasing the sample size would likely reduce the delta even further.**
