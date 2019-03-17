@@ -38,11 +38,18 @@ dt1 <- fread("./data/Clingingsmith.2009.csv")
 a. Using either `dplyr` or `data.table`, group the data by `success` and report whether views toward others are generally more positive among lottery winners or lottery non-winners. 
 
 ```{r}
+d %>%
+  group_by(success) %>%
+  summarize(mean_views = mean(views))
+```
+**We see that there is indeed a difference in mean "views" between those that successfuly obtained the visa and those that did not. **
+
+```{r}
 ATE <- dt1[ , .('group_mean' = mean(views)), keyby = .(success)] %>%
     .[ , diff(group_mean)]
 ATE
 ```
-**We see an ATE of about 0.475, meaning those who win the visa lottery see an average positive delta in views of about 0.475 versus those that do not win the visa lottery.**
+**We see an ATE of about 0.475, meaning those who win the visa lottery see an average positive delta in views of about 0.475 versus those that do not win the visa lottery. But right now we have no basis to understand if this difference is meaningful.**
 
 \newpage
 
@@ -346,7 +353,7 @@ num_phones_cover_ad_cost = ad_cost/profit_per_phone
 percent_users = num_phones_cover_ad_cost/users
 cat("The increase in user buy rate needs to be greater than: ", percent_users*100)
 ```
-**More than 0.6% of all visitors to our newspaper's website need to purchase a phone in order to produce a positive ROI.**
+**The probability of purchase needs to increase by more than 20% in order for it to be "worth it" and have a positive ROI. Put another way, more than 0.6% of all visitors to our newspaper's website need to purchase a phone in order to produce a positive ROI.**
 
 \newpage
 
