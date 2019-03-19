@@ -76,7 +76,7 @@ b. Suppose that an experiment were conducted on your pool of subjects. In what w
 
 c. Which population is more relevant to study for future decision making: the set of Compliers, or the set of Compliers plus Never-Takers? Why?
 
-**If the goal of the experiment is to measure the effect of treatment, then the set of Compliers are far more relevant to the study. The case could be made for Compliers plus Never-Takers depending on the type of experiment. But more often than not we will want to focus on compliers.**
+**If the goal of the experiment is to measure the effect of treatment, then the set of Compliers are far more relevant to the study. However, there are no guarantees that you will be able to determine who the Compliers are. So you may have to deal with the nitty-gritty aspects of the experiment and study both Compliers and Never-takers. This is not necessairily bad and it may open you up to new ideas for experiments in general.**
 
 \newpage
 
@@ -100,7 +100,7 @@ CACE_2b = turnout_delta/(250/1000)
 
 c. Do the canvassers' exaggerated reports make their efforts seem more or less effective? Define effectiveness either in terms of the ITT or CACE. Why does the definition matter? 
 
-**The CACE calculated from the canvassers' exaggerated reports make their efforts seem less effective. Effectiveness in terms of CACE is looking at the compliers in the treatment and deriving the effect from the population. Whereas calculating ITT relies on everyone in treatment (compliers and non-compliers). Hence, CACE allows us to more accurately calculate our treatment effect.**
+**The CACE calculated from the canvassers' exaggerated reports make their efforts seem less effective. Effectiveness in terms of CACE is looking at the compliers in the treatment and deriving the effect from the population. Whereas calculating ITT relies on everyone (compliers and non-compliers) in treatment. Hence, CACE allows us to more accurately calculate our treatment effect.**
 
 \newpage
 
@@ -217,7 +217,7 @@ tot_obs = base + treat + treat_c + placebo_c + placebo
 ```
 
 ```{r, include=TRUE}
-# creating a dataframe
+# re-create the table
 d4 <- data.frame( "baseline" = c(rep(1,base), rep(0, tot_obs - base)),
                   "treatment" = c(rep(0, base), rep(1, treat ), rep(0, tot_obs - base - treat)),
                   "treatment_control" = c(rep(0, base), rep(0, treat ), rep(1, treat_c), rep(0, tot_obs - base - treat - treat_c)),
@@ -228,13 +228,14 @@ d4 <- data.frame( "baseline" = c(rep(1,base), rep(0, tot_obs - base)),
 ```
 
 ```{r}
-# Verify the means match those in the table
+# replicate the turnout
 mean(d4$turnout[d4$baseline == 1])
 mean(d4$turnout[d4$treatment == 1])
 mean(d4$turnout[d4$treatment_control == 1])
 mean(d4$turnout[d4$placebo == 1])
 mean(d4$turnout[d4$placebo_control == 1])
 ```
+**We are able to replicate the turnout using our data and it matches the values in the table.**
 
 a. Estimate the proportion of Compliers by using the data on the Treatment group.  Then compute a second estimate of the proportion of Compliers by using the data on the Placebo group.  Are these sample proportions statistically significantly different from each other?  Explain why you would not expect them to be different, given the experimental design. (Hint: ITT_D means "the average effect of the treatment on the dosage of the treatment." I.E., it’s the contact rate $\alpha$ in the async).
 ```{r}
@@ -274,7 +275,7 @@ to_delta = 0.3909 - 0.2979
 
 f. Based on what we talked about in class -- that the rate of compliance determines whether one or another design is more efficient -- given the compliance rate in this study, which design *should* provide a more efficient estimate of the treatment effect? If you want to review the specific paper that makes this claim, check out [this link](https://github.com/UCB-MIDS/experiments-causality/blob/master/readings/GerberGreenKaplanKern.2010.pdf). Does it? 
 
-**Based off of our calculations above we see that there is a difference when we compare treatment to placebo vs baseline. This leads us to believe that the experimental design with the placebo would be more efficient and serve as a better comparison.**
+**We calculated the compliance rates in part a and they are very similar between treatment and placebo. So does adding a placebo into our experimental design make it more efficient? Based off of our calculations above we see that there is a difference when we compare treatment to placebo vs baseline. This leads us to believe that the experimental design with the placebo would be more efficient and serve as a better comparison.**
 
 
 <!--
@@ -430,4 +431,4 @@ se = sd(res/sqrt(length(res)))
 
 **The resulting confidence interval is: `r c(ATE - 2*se, ATE + 2*se)`**
 
-**The confidence interval we get for run from part h is much tighter than the interval we got from part g.**
+**The confidence interval we get for run from part h is much tighter than the interval we got from part g. This implies that there is lower variability which lends credibility to the experiment that it is less likely to obtain these results by chance.**
